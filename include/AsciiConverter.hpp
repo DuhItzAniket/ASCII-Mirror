@@ -4,14 +4,23 @@
 #include <string>
 #include <vector>
 #include <chrono>
+#include <array>
 
 class AsciiConverter {
 public:
+    enum class PresetCharset {
+        Standard,     // @%#*+=-:. 
+        Dense,        // $@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~<>i!lI;:,"^`'.
+        Blocks,       // █▓▒░ 
+        Minimal       // @# 
+    };
+
     explicit AsciiConverter(int asciiWidth = 120, const std::string& charset = "@%#*+=-:. ");
 
     std::string convert(const cv::Mat& frame);
     void setAsciiWidth(int width);
     void setCharset(const std::string& charset);
+    void setCharset(PresetCharset preset);
     void setInvert(bool invert);
     void setAspectCorrection(float correction);
 
@@ -42,4 +51,5 @@ private:
     cv::Mat preprocess(const cv::Mat& frame) const;
     void rebuildLut() const;
     char mapBrightness(float brightness) const;
+    static std::string presetToString(PresetCharset preset);
 };

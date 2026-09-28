@@ -72,8 +72,26 @@ void AsciiConverter::setInvert(bool invert) {
     }
 }
 
+void AsciiConverter::setCharset(PresetCharset preset) {
+    setCharset(presetToString(preset));
+}
+
 void AsciiConverter::setAspectCorrection(float correction) {
     aspectCorrection_ = std::max(0.1f, correction);
+}
+
+std::string AsciiConverter::presetToString(PresetCharset preset) {
+    switch (preset) {
+        case PresetCharset::Standard:
+            return "@%#*+=-:. ";
+        case PresetCharset::Dense:
+            return "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ";
+        case PresetCharset::Blocks:
+            return "█▓▒░ ";
+        case PresetCharset::Minimal:
+            return "@# ";
+    }
+    return "@%#*+=-:. ";
 }
 
 cv::Mat AsciiConverter::preprocess(const cv::Mat& frame) const {

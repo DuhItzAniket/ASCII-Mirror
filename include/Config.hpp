@@ -7,6 +7,7 @@ struct Config {
     int cameraIndex = 0;
     int asciiWidth = 120;
     std::string charset = "@%#*+=-:. ";
+    int charsetPreset = 0; // 0=Standard, 1=Dense, 2=Blocks, 3=Minimal
     bool invert = false;
     bool showFps = true;
     bool colorEnabled = false;

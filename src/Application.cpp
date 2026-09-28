@@ -11,6 +11,11 @@ Application::Application(const Config& config)
     converter_.setInvert(config.invert);
     converter_.setAspectCorrection(config.aspectCorrection);
 
+    // Apply charset preset if specified (overrides custom charset)
+    if (config.charsetPreset >= 0 && config.charsetPreset <= 3) {
+        converter_.setCharset(static_cast<AsciiConverter::PresetCharset>(config.charsetPreset));
+    }
+
     if (config.filterMode == "invert") processor_.setFilter(FilterType::Invert);
     else if (config.filterMode == "threshold") processor_.setFilter(FilterType::Threshold);
     else if (config.filterMode == "edge") processor_.setFilter(FilterType::Edge);
@@ -38,7 +43,8 @@ int Application::run() {
     std::cout << "  +, =      Increase ASCII width\n";
     std::cout << "  -         Decrease ASCII width\n";
     std::cout << "  1-5       Change filter mode\n";
-    std::cout << "  0         No filter\n\n";
+    std::cout << "  0         No filter\n";
+    std::cout << "  C         Cycle charset preset\n\n";
 
     std::cout << "Starting camera...\n";
 
@@ -131,6 +137,11 @@ void Application::processInput() {
             break;
         case '5':
             processor_.setFilter(FilterType::Blur);
+            break;
+        case 'c':
+        case 'C':
+            config_.charsetPreset = (config_.charsetPreset + 1) % 4;
+            converter_.setCharset(static_cast<AsciiConverter::PresetCharset>(config_.charsetPreset));
             break;
     }
 }

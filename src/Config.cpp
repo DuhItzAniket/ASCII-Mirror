@@ -32,6 +32,7 @@ Config Config::loadFromFile(const std::string& path) {
         if (key == "camera_index") config.cameraIndex = std::stoi(value);
         else if (key == "ascii_width") config.asciiWidth = std::stoi(value);
         else if (key == "charset") config.charset = value;
+        else if (key == "charset_preset") config.charsetPreset = std::stoi(value);
         else if (key == "invert") config.invert = (value == "true" || value == "1");
         else if (key == "show_fps") config.showFps = (value == "true" || value == "1");
         else if (key == "color_enabled") config.colorEnabled = (value == "true" || value == "1");
@@ -51,6 +52,7 @@ void Config::saveToFile(const std::string& path) const {
     file << "camera_index=" << cameraIndex << "\n";
     file << "ascii_width=" << asciiWidth << "\n";
     file << "charset=" << charset << "\n";
+    file << "charset_preset=" << charsetPreset << "\n";
     file << "invert=" << (invert ? "true" : "false") << "\n";
     file << "show_fps=" << (showFps ? "true" : "false") << "\n";
     file << "color_enabled=" << (colorEnabled ? "true" : "false") << "\n";
@@ -74,6 +76,8 @@ Config Config::fromArgs(int argc, char* argv[]) {
             if (i + 1 < argc) config.asciiWidth = std::stoi(argv[++i]);
         } else if (arg == "--charset") {
             if (i + 1 < argc) config.charset = argv[++i];
+        } else if (arg == "--charset-preset") {
+            if (i + 1 < argc) config.charsetPreset = std::stoi(argv[++i]);
         } else if (arg == "--invert") {
             config.invert = true;
         } else if (arg == "--no-fps") {
@@ -97,6 +101,7 @@ void Config::printUsage(const char* programName) {
     std::cout << "  -c, --camera <idx>   Camera index (default: 0)\n";
     std::cout << "  -w, --width <cols>   ASCII width in characters (default: 120)\n";
     std::cout << "  --charset <chars>    ASCII character ramp (default: @%#*+=-:. )\n";
+    std::cout << "  --charset-preset <n> Preset charset: 0=Standard, 1=Dense, 2=Blocks, 3=Minimal\n";
     std::cout << "  --invert             Invert brightness mapping\n";
     std::cout << "  --no-fps             Disable FPS display\n";
     std::cout << "  --color              Enable color output (experimental)\n";
