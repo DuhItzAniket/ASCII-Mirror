@@ -36,11 +36,11 @@
 - [x] Command-line arguments
 - [x] Runtime parameter adjustment
 
-## Phase 6: Performance Optimization
-- [ ] Buffer reuse for frames
-- [ ] String capacity reservation
-- [ ] OpenCV operation optimization
-- [ ] Benchmark measurements
+## Phase 6: Performance Optimization ✓
+- [x] Buffer reuse for frames
+- [x] String capacity reservation
+- [x] OpenCV operation optimization
+- [x] Benchmark measurements (FPS, convert time, preprocess time)
 - [ ] Optional multithreading (producer-consumer)
 
 ## Phase 7: Visual Modes ✓
@@ -51,18 +51,18 @@
 - [x] Edge detection
 - [x] Runtime mode switching
 
-## Phase 8: Color Rendering
-- [ ] ANSI 256-color grayscale
-- [ ] True color RGB approximation
-- [ ] Color mode toggle
-- [ ] Graceful fallback for non-color terminals
+## Phase 8: Color Rendering ✓
+- [x] ANSI 256-color grayscale
+- [x] True color RGB approximation
+- [x] Color mode toggle
+- [x] Graceful fallback for non-color terminals
 
-## Phase 9: Error Handling
-- [ ] Camera disconnect handling
-- [ ] Invalid frame recovery
+## Phase 9: Error Handling ✓
+- [x] Camera disconnect handling
+- [x] Invalid frame recovery
 - [ ] Terminal resize handling
-- [ ] Configuration validation
-- [ ] Resource cleanup on exceptions
+- [x] Configuration validation
+- [x] Resource cleanup on exceptions
 
 ## Phase 10: Automated Testing ✓
 - [x] Unit tests for AsciiConverter
