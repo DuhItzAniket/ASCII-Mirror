@@ -34,82 +34,119 @@ Application::~Application() {
 }
 
 int Application::run() {
-    std::cout << "========================================\n";
-    std::cout << "       ASCII MIRROR ENGINE\n";
-    std::cout << "========================================\n\n";
+    try {
+        std::cout << "========================================\n";
+        std::cout << "       ASCII MIRROR ENGINE\n";
+        std::cout << "========================================\n\n";
 
-    std::cout << "Camera: " << config_.cameraIndex << "\n";
-    std::cout << "ASCII Width: " << config_.asciiWidth << "\n";
-    std::cout << "Filter: " << config_.filterMode << "\n";
-    std::cout << "Invert: " << (config_.invert ? "On" : "Off") << "\n\n";
+        std::cout << "Camera: " << config_.cameraIndex << "\n";
+        std::cout << "ASCII Width: " << config_.asciiWidth << "\n";
+        std::cout << "Filter: " << config_.filterMode << "\n";
+        std::cout << "Invert: " << (config_.invert ? "On" : "Off") << "\n\n";
 
-    std::cout << "Controls:\n";
-    std::cout << "  Q, ESC    Quit\n";
-    std::cout << "  +, =      Increase ASCII width\n";
-    std::cout << "  -         Decrease ASCII width\n";
-    std::cout << "  1-5       Change filter mode\n";
-    std::cout << "  0         No filter\n";
-    std::cout << "  C         Cycle charset preset\n";
-    std::cout << "  K         Toggle color mode\n\n";
+        std::cout << "Controls:\n";
+        std::cout << "  Q, ESC    Quit\n";
+        std::cout << "  +, =      Increase ASCII width\n";
+        std::cout << "  -         Decrease ASCII width\n";
+        std::cout << "  1-5       Change filter mode\n";
+        std::cout << "  0         No filter\n";
+        std::cout << "  C         Cycle charset preset\n";
+        std::cout << "  K         Toggle color mode\n\n";
 
-    std::cout << "Starting camera...\n";
+        std::cout << "Starting camera...\n";
 
-    if (!camera_.open(config_.cameraIndex)) {
-        std::cerr << "Failed to open camera. Exiting.\n";
-        return 1;
-    }
-
-    std::cout << "Camera opened: " << camera_.getWidth() << "x" << camera_.getHeight()
-              << " @ " << camera_.getFPS() << " FPS\n\n";
-
-    renderer_.initialize();
-
-    running_ = true;
-    auto frameStart = std::chrono::steady_clock::now();
-    const auto frameDuration = std::chrono::milliseconds(1000 / config_.targetFps);
-
-    while (running_) {
-        frameStart = std::chrono::steady_clock::now();
-
-        if (!camera_.read(frameBuffer_) || frameBuffer_.empty()) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-            continue;
+        if (!camera_.open(config_.cameraIndex)) {
+            std::cerr << "Failed to open camera index " << config_.cameraIndex << ". Exiting.\n";
+            return 1;
         }
 
-        if (config_.colorEnabled && renderer_.getColorMode() != TerminalRenderer::ColorMode::None) {
-            // Use color rendering directly from original frame
-            cv::Mat processed = processor_.process(frameBuffer_);
-            renderer_.renderColor(frameBuffer_, config_.asciiWidth, config_.aspectCorrection);
-        } else {
-            cv::Mat processed = processor_.process(frameBuffer_);
-            std::string ascii = converter_.convert(processed);
+        int camWidth = camera_.getWidth();
+        int camHeight = camera_.getHeight();
+        double camFps = camera_.getFPS();
+        if (camWidth <= 0 || camHeight <= 0) {
+            std::cerr << "Warning: Could not detect camera resolution.\n";
+        }
+        std::cout << "Camera opened: " << camWidth << "x" << camHeight
+                  << " @ " << (camFps > 0 ? std::to_string(camFps) : "unknown") << " FPS\n\n";
 
-            if (config_.showFps) {
-                ascii += "\nFPS: " + std::to_string(static_cast<int>(fps_));
-                auto stats = converter_.getStats();
-                if (stats.framesProcessed > 0) {
-                    double avgConvertMs = stats.convertTime.count() / 1000.0 / stats.framesProcessed;
-                    double avgPreprocessMs = stats.preprocessTime.count() / 1000.0 / stats.framesProcessed;
-                    ascii += " | Convert: " + std::to_string(static_cast<int>(avgConvertMs * 10) / 10.0) + "ms";
-                    ascii += " | Preprocess: " + std::to_string(static_cast<int>(avgPreprocessMs * 10) / 10.0) + "ms";
+        renderer_.initialize();
+
+        running_ = true;
+        auto frameStart = std::chrono::steady_clock::now();
+        const auto frameDuration = std::chrono::milliseconds(1000 / std::max(1, config_.targetFps));
+        int consecutiveEmptyFrames = 0;
+        const int maxEmptyFrames = 30;
+
+        while (running_) {
+            frameStart = std::chrono::steady_clock::now();
+
+            bool frameRead = camera_.read(frameBuffer_);
+            if (!frameRead || frameBuffer_.empty()) {
+                consecutiveEmptyFrames++;
+                if (consecutiveEmptyFrames >= maxEmptyFrames) {
+                    std::cerr << "\nError: Camera disconnected or failed to provide frames.\n";
+                    running_ = false;
+                    break;
                 }
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                continue;
+            }
+            consecutiveEmptyFrames = 0;
+
+            try {
+                if (config_.colorEnabled && renderer_.getColorMode() != TerminalRenderer::ColorMode::None) {
+                    // Use color rendering directly from original frame
+                    cv::Mat processed = processor_.process(frameBuffer_);
+                    renderer_.renderColor(frameBuffer_, config_.asciiWidth, config_.aspectCorrection);
+                } else {
+                    cv::Mat processed = processor_.process(frameBuffer_);
+                    std::string ascii = converter_.convert(processed);
+
+                    if (config_.showFps) {
+                        ascii += "\nFPS: " + std::to_string(static_cast<int>(fps_));
+                        auto stats = converter_.getStats();
+                        if (stats.framesProcessed > 0) {
+                            double avgConvertMs = stats.convertTime.count() / 1000.0 / stats.framesProcessed;
+                            double avgPreprocessMs = stats.preprocessTime.count() / 1000.0 / stats.framesProcessed;
+                            ascii += " | Convert: " + std::to_string(static_cast<int>(avgConvertMs * 10) / 10.0) + "ms";
+                            ascii += " | Preprocess: " + std::to_string(static_cast<int>(avgPreprocessMs * 10) / 10.0) + "ms";
+                        }
+                    }
+
+                    renderer_.render(ascii);
+                }
+            } catch (const cv::Exception& e) {
+                std::cerr << "\nOpenCV error during processing: " << e.what() << "\n";
+                running_ = false;
+                break;
+            } catch (const std::exception& e) {
+                std::cerr << "\nProcessing error: " << e.what() << "\n";
+                running_ = false;
+                break;
             }
 
-            renderer_.render(ascii);
-        }
-        processInput();
-        updateFps();
+            processInput();
+            updateFps();
 
-        auto elapsed = std::chrono::steady_clock::now() - frameStart;
-        if (elapsed < frameDuration) {
-            std::this_thread::sleep_for(frameDuration - elapsed);
+            auto elapsed = std::chrono::steady_clock::now() - frameStart;
+            if (elapsed < frameDuration) {
+                std::this_thread::sleep_for(frameDuration - elapsed);
+            }
         }
+
+        renderer_.shutdown();
+        printStats();
+        std::cout << "\nShutdown complete.\n";
+        return 0;
+    } catch (const std::exception& e) {
+        std::cerr << "Fatal error in application: " << e.what() << "\n";
+        renderer_.shutdown();
+        return 1;
+    } catch (...) {
+        std::cerr << "Unknown fatal error in application\n";
+        renderer_.shutdown();
+        return 1;
     }
-
-    renderer_.shutdown();
-    printStats();
-    std::cout << "\nShutdown complete.\n";
-    return 0;
 }
 
 void Application::processInput() {

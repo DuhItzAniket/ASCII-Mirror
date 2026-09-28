@@ -3,23 +3,30 @@
 #include <sstream>
 #include <iostream>
 #include <cstring>
+#include <algorithm>
 
 Config Config::loadFromFile(const std::string& path) {
     Config config;
     std::ifstream file(path);
     if (!file.is_open()) {
+        std::cerr << "Warning: Could not open config file: " << path << "\n";
         return config;
     }
 
     std::string line;
+    int lineNum = 0;
     while (std::getline(file, line)) {
+        lineNum++;
         line.erase(0, line.find_first_not_of(" \t"));
         line.erase(line.find_last_not_of(" \t") + 1);
 
         if (line.empty() || line[0] == '#') continue;
 
         size_t eqPos = line.find('=');
-        if (eqPos == std::string::npos) continue;
+        if (eqPos == std::string::npos) {
+            std::cerr << "Warning: Invalid config line " << lineNum << ": " << line << "\n";
+            continue;
+        }
 
         std::string key = line.substr(0, eqPos);
         std::string value = line.substr(eqPos + 1);
@@ -29,16 +36,20 @@ Config Config::loadFromFile(const std::string& path) {
         value.erase(0, value.find_first_not_of(" \t"));
         value.erase(value.find_last_not_of(" \t") + 1);
 
-        if (key == "camera_index") config.cameraIndex = std::stoi(value);
-        else if (key == "ascii_width") config.asciiWidth = std::stoi(value);
-        else if (key == "charset") config.charset = value;
-        else if (key == "charset_preset") config.charsetPreset = std::stoi(value);
-        else if (key == "invert") config.invert = (value == "true" || value == "1");
-        else if (key == "show_fps") config.showFps = (value == "true" || value == "1");
-        else if (key == "color_enabled") config.colorEnabled = (value == "true" || value == "1");
-        else if (key == "filter_mode") config.filterMode = value;
-        else if (key == "aspect_correction") config.aspectCorrection = std::stof(value);
-        else if (key == "target_fps") config.targetFps = std::stoi(value);
+        try {
+            if (key == "camera_index") config.cameraIndex = std::stoi(value);
+            else if (key == "ascii_width") config.asciiWidth = std::max(10, std::stoi(value));
+            else if (key == "charset") config.charset = value;
+            else if (key == "charset_preset") config.charsetPreset = std::clamp(std::stoi(value), 0, 3);
+            else if (key == "invert") config.invert = (value == "true" || value == "1");
+            else if (key == "show_fps") config.showFps = (value == "true" || value == "1");
+            else if (key == "color_enabled") config.colorEnabled = (value == "true" || value == "1");
+            else if (key == "filter_mode") config.filterMode = value;
+            else if (key == "aspect_correction") config.aspectCorrection = std::max(0.1f, std::stof(value));
+            else if (key == "target_fps") config.targetFps = std::max(1, std::stoi(value));
+        } catch (const std::exception& e) {
+            std::cerr << "Warning: Failed to parse config line " << lineNum << ": " << e.what() << "\n";
+        }
     }
 
     return config;
@@ -71,13 +82,47 @@ Config Config::fromArgs(int argc, char* argv[]) {
             printUsage(argv[0]);
             exit(0);
         } else if (arg == "-c" || arg == "--camera") {
-            if (i + 1 < argc) config.cameraIndex = std::stoi(argv[++i]);
+            if (i + 1 < argc) {
+                try {
+                    config.cameraIndex = std::stoi(argv[++i]);
+                } catch (const std::exception&) {
+                    std::cerr << "Error: Invalid camera index\n";
+                    exit(1);
+                }
+            } else {
+                std::cerr << "Error: --camera requires a value\n";
+                exit(1);
+            }
         } else if (arg == "-w" || arg == "--width") {
-            if (i + 1 < argc) config.asciiWidth = std::stoi(argv[++i]);
+            if (i + 1 < argc) {
+                try {
+                    config.asciiWidth = std::max(10, std::stoi(argv[++i]));
+                } catch (const std::exception&) {
+                    std::cerr << "Error: Invalid width value\n";
+                    exit(1);
+                }
+            } else {
+                std::cerr << "Error: --width requires a value\n";
+                exit(1);
+            }
         } else if (arg == "--charset") {
             if (i + 1 < argc) config.charset = argv[++i];
+            else {
+                std::cerr << "Error: --charset requires a value\n";
+                exit(1);
+            }
         } else if (arg == "--charset-preset") {
-            if (i + 1 < argc) config.charsetPreset = std::stoi(argv[++i]);
+            if (i + 1 < argc) {
+                try {
+                    config.charsetPreset = std::clamp(std::stoi(argv[++i]), 0, 3);
+                } catch (const std::exception&) {
+                    std::cerr << "Error: Invalid charset preset value\n";
+                    exit(1);
+                }
+            } else {
+                std::cerr << "Error: --charset-preset requires a value\n";
+                exit(1);
+            }
         } else if (arg == "--invert") {
             config.invert = true;
         } else if (arg == "--no-fps") {
@@ -86,8 +131,20 @@ Config Config::fromArgs(int argc, char* argv[]) {
             config.colorEnabled = true;
         } else if (arg == "--filter") {
             if (i + 1 < argc) config.filterMode = argv[++i];
+            else {
+                std::cerr << "Error: --filter requires a value\n";
+                exit(1);
+            }
         } else if (arg == "--config") {
             if (i + 1 < argc) config = loadFromFile(argv[++i]);
+            else {
+                std::cerr << "Error: --config requires a value\n";
+                exit(1);
+            }
+        } else {
+            std::cerr << "Error: Unknown option: " << arg << "\n";
+            printUsage(argv[0]);
+            exit(1);
         }
     }
 
