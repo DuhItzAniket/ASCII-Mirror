@@ -21,6 +21,11 @@ Application::Application(const Config& config)
     else if (config.filterMode == "edge") processor_.setFilter(FilterType::Edge);
     else if (config.filterMode == "blur") processor_.setFilter(FilterType::Blur);
     else processor_.setFilter(FilterType::Grayscale);
+
+    // Set color mode
+    if (config.colorEnabled) {
+        renderer_.setColorMode(TerminalRenderer::ColorMode::TrueColor);
+    }
 }
 
 Application::~Application() {
@@ -44,7 +49,8 @@ int Application::run() {
     std::cout << "  -         Decrease ASCII width\n";
     std::cout << "  1-5       Change filter mode\n";
     std::cout << "  0         No filter\n";
-    std::cout << "  C         Cycle charset preset\n\n";
+    std::cout << "  C         Cycle charset preset\n";
+    std::cout << "  K         Toggle color mode\n\n";
 
     std::cout << "Starting camera...\n";
 
@@ -70,21 +76,27 @@ int Application::run() {
             continue;
         }
 
-        cv::Mat processed = processor_.process(frameBuffer_);
-        std::string ascii = converter_.convert(processed);
+        if (config_.colorEnabled && renderer_.getColorMode() != TerminalRenderer::ColorMode::None) {
+            // Use color rendering directly from original frame
+            cv::Mat processed = processor_.process(frameBuffer_);
+            renderer_.renderColor(frameBuffer_, config_.asciiWidth, config_.aspectCorrection);
+        } else {
+            cv::Mat processed = processor_.process(frameBuffer_);
+            std::string ascii = converter_.convert(processed);
 
-        if (config_.showFps) {
-            ascii += "\nFPS: " + std::to_string(static_cast<int>(fps_));
-            auto stats = converter_.getStats();
-            if (stats.framesProcessed > 0) {
-                double avgConvertMs = stats.convertTime.count() / 1000.0 / stats.framesProcessed;
-                double avgPreprocessMs = stats.preprocessTime.count() / 1000.0 / stats.framesProcessed;
-                ascii += " | Convert: " + std::to_string(static_cast<int>(avgConvertMs * 10) / 10.0) + "ms";
-                ascii += " | Preprocess: " + std::to_string(static_cast<int>(avgPreprocessMs * 10) / 10.0) + "ms";
+            if (config_.showFps) {
+                ascii += "\nFPS: " + std::to_string(static_cast<int>(fps_));
+                auto stats = converter_.getStats();
+                if (stats.framesProcessed > 0) {
+                    double avgConvertMs = stats.convertTime.count() / 1000.0 / stats.framesProcessed;
+                    double avgPreprocessMs = stats.preprocessTime.count() / 1000.0 / stats.framesProcessed;
+                    ascii += " | Convert: " + std::to_string(static_cast<int>(avgConvertMs * 10) / 10.0) + "ms";
+                    ascii += " | Preprocess: " + std::to_string(static_cast<int>(avgPreprocessMs * 10) / 10.0) + "ms";
+                }
             }
-        }
 
-        renderer_.render(ascii);
+            renderer_.render(ascii);
+        }
         processInput();
         updateFps();
 
@@ -142,6 +154,15 @@ void Application::processInput() {
         case 'C':
             config_.charsetPreset = (config_.charsetPreset + 1) % 4;
             converter_.setCharset(static_cast<AsciiConverter::PresetCharset>(config_.charsetPreset));
+            break;
+        case 'k':
+        case 'K':
+            config_.colorEnabled = !config_.colorEnabled;
+            if (config_.colorEnabled) {
+                renderer_.setColorMode(TerminalRenderer::ColorMode::TrueColor);
+            } else {
+                renderer_.setColorMode(TerminalRenderer::ColorMode::None);
+            }
             break;
     }
 }
