@@ -3,6 +3,7 @@
 #include <opencv2/core.hpp>
 #include <string>
 #include <vector>
+#include <chrono>
 
 class AsciiConverter {
 public:
@@ -18,12 +19,27 @@ public:
     const std::string& getCharset() const { return charset_; }
     bool getInvert() const { return invert_; }
 
+    struct Stats {
+        std::chrono::microseconds convertTime{0};
+        std::chrono::microseconds preprocessTime{0};
+        int framesProcessed = 0;
+    };
+    Stats getStats() const { return stats_; }
+    void resetStats() { stats_ = {}; }
+
 private:
     int asciiWidth_ = 120;
     std::string charset_ = "@%#*+=-:. ";
     bool invert_ = false;
     float aspectCorrection_ = 0.5f;
 
+    mutable cv::Mat grayBuffer_;
+    mutable std::array<char, 256> lut_{};
+    mutable bool lutDirty_ = true;
+
+    Stats stats_;
+
     cv::Mat preprocess(const cv::Mat& frame) const;
+    void rebuildLut() const;
     char mapBrightness(float brightness) const;
 };

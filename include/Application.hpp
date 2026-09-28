@@ -17,6 +17,7 @@ private:
     void processInput();
     void updateFps();
     void printHelp() const;
+    void printStats() const;
 
     Config config_;
     Camera camera_;
@@ -28,4 +29,5 @@ private:
     int frameCount_ = 0;
     double fps_ = 0.0;
     std::chrono::steady_clock::time_point lastFpsUpdate_;
+    mutable cv::Mat frameBuffer_;
 };

@@ -53,23 +53,29 @@ int Application::run() {
     renderer_.initialize();
 
     running_ = true;
-    cv::Mat frame;
     auto frameStart = std::chrono::steady_clock::now();
     const auto frameDuration = std::chrono::milliseconds(1000 / config_.targetFps);
 
     while (running_) {
         frameStart = std::chrono::steady_clock::now();
 
-        if (!camera_.read(frame) || frame.empty()) {
+        if (!camera_.read(frameBuffer_) || frameBuffer_.empty()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             continue;
         }
 
-        cv::Mat processed = processor_.process(frame);
+        cv::Mat processed = processor_.process(frameBuffer_);
         std::string ascii = converter_.convert(processed);
 
         if (config_.showFps) {
             ascii += "\nFPS: " + std::to_string(static_cast<int>(fps_));
+            auto stats = converter_.getStats();
+            if (stats.framesProcessed > 0) {
+                double avgConvertMs = stats.convertTime.count() / 1000.0 / stats.framesProcessed;
+                double avgPreprocessMs = stats.preprocessTime.count() / 1000.0 / stats.framesProcessed;
+                ascii += " | Convert: " + std::to_string(static_cast<int>(avgConvertMs * 10) / 10.0) + "ms";
+                ascii += " | Preprocess: " + std::to_string(static_cast<int>(avgPreprocessMs * 10) / 10.0) + "ms";
+            }
         }
 
         renderer_.render(ascii);
@@ -83,6 +89,7 @@ int Application::run() {
     }
 
     renderer_.shutdown();
+    printStats();
     std::cout << "\nShutdown complete.\n";
     return 0;
 }
@@ -137,5 +144,18 @@ void Application::updateFps() {
         fps_ = frameCount_ * 1000.0 / elapsed;
         frameCount_ = 0;
         lastFpsUpdate_ = now;
+    }
+}
+
+void Application::printStats() const {
+    auto stats = converter_.getStats();
+    if (stats.framesProcessed > 0) {
+        double avgConvertMs = stats.convertTime.count() / 1000.0 / stats.framesProcessed;
+        double avgPreprocessMs = stats.preprocessTime.count() / 1000.0 / stats.framesProcessed;
+        std::cout << "\nPerformance Stats:\n";
+        std::cout << "  Frames processed: " << stats.framesProcessed << "\n";
+        std::cout << "  Avg convert time: " << avgConvertMs << " ms\n";
+        std::cout << "  Avg preprocess time: " << avgPreprocessMs << " ms\n";
+        std::cout << "  Current FPS: " << fps_ << "\n";
     }
 }
