@@ -23,9 +23,29 @@ Real-time webcam-to-ASCII vision engine written in modern C++ using OpenCV.
 
 ### Windows (MSYS2/MinGW)
 
+**Important**: Run all commands inside the **MSYS2 UCRT64 terminal** (not PowerShell/CMD).
+
 ```bash
-# Install dependencies
-pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-opencv
+# Install dependencies (run in MSYS2 UCRT64 shell)
+pacman -S mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-opencv mingw-w64-ucrt-x86_64-ninja
+
+# Build (run in MSYS2 UCRT64 shell)
+cmake -S . -B build -G Ninja
+cmake --build build
+```
+
+**If you get "CMakeCache.txt exists" error, do a clean rebuild:**
+```bash
+rm -rf build
+cmake -S . -B build -G Ninja
+cmake --build build
+```
+
+### Linux
+
+```bash
+# Ubuntu/Debian
+sudo apt install g++ cmake libopencv-dev
 
 # Build
 cmake -S . -B build
@@ -45,6 +65,12 @@ cmake --build build
 
 ## Usage
 
+### Windows (MSYS2 UCRT64 shell)
+```bash
+./build/ascii_mirror.exe [options]
+```
+
+### Linux
 ```bash
 ./build/ascii_mirror [options]
 ```
