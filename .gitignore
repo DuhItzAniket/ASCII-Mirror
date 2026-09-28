@@ -1,0 +1,33 @@
+# Build directories
+build/
+cmake-build-*/
+*.o
+*.obj
+*.exe
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Package managers
+vcpkg/
+conan/
+.packages/
+
+# Compiled libraries
+*.dll
+*.lib
+*.so
+*.a
+*.dylib
+
+# Test output
+test-results/
+coverage/
